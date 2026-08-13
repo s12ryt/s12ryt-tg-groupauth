@@ -52,7 +52,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          # wrangler 4.x 要求 Node ≥ 22；低於此版本會觸發 wrangler-action
+          # 降級安裝舊 wrangler，進而與 @cloudflare/workers-types@^5 衝突。
+          node-version: "22"
           cache: "npm"
 
       - name: Install dependencies
