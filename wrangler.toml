@@ -11,7 +11,7 @@ enabled = true
 # 再將下方 id 替換為指令輸出的 namespace id。
 [[kv_namespaces]]
 binding = "KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "3f461807202849ab9df48c6db2312a15"
 
 # Cron Trigger：每分鐘掃描超時未驗證記錄並執行 ban。
 [triggers]
