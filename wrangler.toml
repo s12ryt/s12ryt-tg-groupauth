@@ -1,6 +1,7 @@
 name = "s12ryt-tg-groupauth"
 main = "src/index.ts"
-compatibility_date = "2026-08-14"
+# compatibility_date 不可設為「未來」日期（Cloudflare 以 UTC 校驗，未來日期會被拒，error 10021）。
+compatibility_date = "2026-08-13"
 
 # 啟用觀測（logs / metrics）
 [observability]
