@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+.wrangler/
+
+# Internal development records (not for public repo)
+agent/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Secrets / env (NEVER commit)
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+
+# Cache
+.cache/

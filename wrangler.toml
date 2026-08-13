@@ -1,0 +1,26 @@
+name = "s12ryt-tg-groupauth"
+main = "src/index.ts"
+compatibility_date = "2026-08-14"
+
+# 啟用觀測（logs / metrics）
+[observability]
+enabled = true
+
+# KV namespace 綁定。
+# 首次部署前請先建立：`npx wrangler kv namespace create KV`
+# 再將下方 id 替換為指令輸出的 namespace id。
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Cron Trigger：每分鐘掃描超時未驗證記錄並執行 ban。
+[triggers]
+crons = ["* * * * *"]
+
+# Secrets（請用 `npx wrangler secret put <NAME>` 設定，不要寫在這裡）：
+#   BOT_TOKEN             TG 機器人 Token
+#   GROUP_CHAT_ID         目標群組 chat_id（數字，負數代表群組）
+#   WORKER_DOMAIN         Worker 公開域名（如 https://xxx.workers.dev）
+#   TURNSTILE_SITE_KEY    Cloudflare Turnstile 站點 key
+#   TURNSTILE_SECRET_KEY  Cloudflare Turnstile 密鑰
+#   SUPER_ADMIN_ID        超級管理員 user_id（數字）

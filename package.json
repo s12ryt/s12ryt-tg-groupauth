@@ -1,0 +1,24 @@
+{
+  "name": "s12ryt-tg-groupauth",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Telegram 群組驗證機器人，託管於 Cloudflare Worker，採 Turnstile + 臨時 UUID 私訊驗證流程。",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:sync": "bash tests/run-sync-test.sh",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "grammy": "^1.32.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260811.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0",
+    "wrangler": "^4.0.0"
+  }
+}

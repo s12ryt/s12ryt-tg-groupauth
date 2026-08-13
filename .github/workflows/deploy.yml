@@ -1,0 +1,95 @@
+name: Deploy to Cloudflare Workers
+
+# 僅手動觸發（從 GitHub Actions 頁面點 Run workflow）。
+# Secrets 與 KV namespace 由本地 wrangler 維護，本 workflow 只負責驗證 + 部署程式碼。
+on:
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: "跳過測試直接部署（緊急用途，不建議）"
+        required: false
+        type: boolean
+        default: false
+
+# 避免同時多個部署互相覆寫。
+concurrency:
+  group: deploy-cloudflare-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test & Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: 檢查必要的 GitHub Secrets
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=()
+          [ -z "$CF_API_TOKEN" ]  && missing+=("CLOUDFLARE_API_TOKEN")
+          [ -z "$CF_ACCOUNT_ID" ] && missing+=("CLOUDFLARE_ACCOUNT_ID")
+          if [ ${#missing[@]} -gt 0 ]; then
+            echo "::error::缺少 GitHub Secrets：${missing[*]}"
+            echo "請至 Settings → Secrets and variables → Actions 新增："
+            echo "  - CLOUDFLARE_API_TOKEN  (Cloudflare API Token，需 Workers Scripts:Edit 權限)"
+            echo "  - CLOUDFLARE_ACCOUNT_ID (Cloudflare Account ID)"
+            exit 1
+          fi
+
+      - name: 檢查 wrangler.toml 已填入真實 KV namespace id
+        run: |
+          if grep -q "REPLACE_WITH_KV_NAMESPACE_ID" wrangler.toml; then
+            echo "::error::wrangler.toml 的 KV id 仍為佔位符。"
+            echo "請先於本機執行：npx wrangler kv namespace create KV"
+            echo "再將回傳的 id 填入 wrangler.toml 並 commit。"
+            exit 1
+          fi
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        if: ${{ inputs.skip_tests != true }}
+        run: npm run typecheck
+
+      - name: Unit tests
+        if: ${{ inputs.skip_tests != true }}
+        run: npm test
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # 預設執行 `wrangler deploy`，會讀取 wrangler.toml 設定。
+          command: deploy
+
+      - name: Sync Worker Secrets（從 GitHub Secrets 同步到 Cloudflare）
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          GROUP_CHAT_ID: ${{ secrets.GROUP_CHAT_ID }}
+          WORKER_DOMAIN: ${{ secrets.WORKER_DOMAIN }}
+          TURNSTILE_SITE_KEY: ${{ secrets.TURNSTILE_SITE_KEY }}
+          TURNSTILE_SECRET_KEY: ${{ secrets.TURNSTILE_SECRET_KEY }}
+          SUPER_ADMIN_ID: ${{ secrets.SUPER_ADMIN_ID }}
+        # 逐一同步：非空則 wrangler secret put，空則跳過保留原值。
+        # 邏輯與測試見 scripts/sync-worker-secrets.sh / tests/run-sync-test.sh。
+        run: bash scripts/sync-worker-secrets.sh
+
+      - name: 部署後提醒
+        run: |
+          echo "::notice::部署完成。若尚未設定 Telegram webhook，請執行："
+          echo "  curl \"https://api.telegram.org/bot<BOT_TOKEN>/setWebhook?url=<WORKER_DOMAIN>/tg\""
+          echo "首次部署前須以本機 wrangler secret put 設定所有 secrets（見 README）。"
