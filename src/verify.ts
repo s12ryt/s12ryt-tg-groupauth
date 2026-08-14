@@ -75,6 +75,44 @@ export interface TgMember {
 
 const BUFFER_SEC = 60;
 
+/**
+ * Telegram service message 欄位清單（系統產生的提示訊息，如「xxx 加入群組」、
+ * 群組名稱變更、置頂訊息等）。任一欄位存在且非 null 即視為 service message。
+ */
+export const SERVICE_MESSAGE_KEYS = [
+  "new_chat_members",
+  "left_chat_member",
+  "new_chat_title",
+  "new_chat_photo",
+  "delete_chat_photo",
+  "group_chat_created",
+  "supergroup_chat_created",
+  "channel_chat_created",
+  "pinned_message",
+  "migrate_to_chat_id",
+  "migrate_from_chat_id",
+  "proximity_alert_triggered",
+  "forum_topic_created",
+  "forum_topic_edited",
+  "forum_topic_closed",
+  "forum_topic_reopened",
+  "general_topic_hidden",
+  "general_topic_unhidden",
+  "video_chat_scheduled",
+  "video_chat_started",
+  "video_chat_ended",
+  "video_chat_participants_invited",
+] as const;
+
+/** 判斷一則訊息是否為 service message（任一 service 欄位存在且非 null）。 */
+export function isServiceMessage(msg: Record<string, unknown>): boolean {
+  for (const key of SERVICE_MESSAGE_KEYS) {
+    const v = msg[key];
+    if (v !== undefined && v !== null) return true;
+  }
+  return false;
+}
+
 /** 組裝驗證按鈕 URL：{workerDomain}/captcha?u={userId}。 */
 export function captchaButtonUrl(workerDomain: string, userId: number): string {
   const base = workerDomain.replace(/\/+$/, "");

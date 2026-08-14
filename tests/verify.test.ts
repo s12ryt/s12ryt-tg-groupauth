@@ -9,6 +9,8 @@ import {
   sweepExpiredPending,
   sweepDelayedDeletes,
   manualVerify,
+  isServiceMessage,
+  SERVICE_MESSAGE_KEYS,
   type VerifyDeps,
 } from "../src/verify";
 import {
@@ -329,5 +331,66 @@ describe("verify — manualVerify", () => {
     await onNewMember(h.deps, member);
     await manualVerify(h.deps, 555);
     expect(h.tg.sentMessages.some((m) => m.text.includes("加入群組"))).toBe(true);
+  });
+});
+
+describe("verify — isServiceMessage", () => {
+  it("new_chat_members 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, new_chat_members: [] })).toBe(true);
+  });
+
+  it("left_chat_member 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, left_chat_member: { id: 1 } })).toBe(true);
+  });
+
+  it("new_chat_title 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, new_chat_title: "x" })).toBe(true);
+  });
+
+  it("new_chat_photo 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, new_chat_photo: [] })).toBe(true);
+  });
+
+  it("delete_chat_photo 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, delete_chat_photo: true })).toBe(true);
+  });
+
+  it("group_chat_created 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, group_chat_created: true })).toBe(true);
+  });
+
+  it("pinned_message 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, pinned_message: { message_id: 9 } })).toBe(true);
+  });
+
+  it("forum_topic_created 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, forum_topic_created: {} })).toBe(true);
+  });
+
+  it("video_chat_started 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, video_chat_started: {} })).toBe(true);
+  });
+
+  it("migrate_to_chat_id 存在 → true", () => {
+    expect(isServiceMessage({ message_id: 1, migrate_to_chat_id: -100 })).toBe(true);
+  });
+
+  it("一般文字訊息 → false", () => {
+    expect(isServiceMessage({ message_id: 1, text: "hello", chat: { id: -1 } })).toBe(false);
+  });
+
+  it("空物件 → false", () => {
+    expect(isServiceMessage({})).toBe(false);
+  });
+
+  it("欄位為 null → false（不算 service）", () => {
+    expect(isServiceMessage({ message_id: 1, new_chat_members: null })).toBe(false);
+  });
+
+  it("SERVICE_MESSAGE_KEYS 涵蓋主要類型且為唯讀常數", () => {
+    expect(Array.isArray(SERVICE_MESSAGE_KEYS)).toBe(true);
+    expect(SERVICE_MESSAGE_KEYS).toContain("new_chat_members");
+    expect(SERVICE_MESSAGE_KEYS).toContain("left_chat_member");
+    expect(SERVICE_MESSAGE_KEYS).toContain("pinned_message");
   });
 });

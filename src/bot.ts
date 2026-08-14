@@ -17,6 +17,7 @@ import {
   onNewMember,
   checkAndVerifyUuid,
   manualVerify,
+  isServiceMessage,
   type VerifyDeps,
 } from "./verify";
 import {
@@ -195,6 +196,23 @@ export function registerBot(bot: Bot, deps: BotDeps): void {
         is_bot: m.is_bot,
       });
     }
+    // 刪除「xxx 加入群組」這則 service message（由機器人發自己的驗證提示取代）
+    await deleteServiceMessage(deps, ctx.chat?.id, ctx.message?.message_id);
+  });
+
+  // 自動刪除其他 service message（離開／標題變更／頭像變更／置頂等），僅目標群組。
+  // 非 service message 則交給後續 handler（如私訊 UUID）。
+  bot.on("message", async (ctx, next) => {
+    const msg = ctx.message;
+    if (
+      msg &&
+      ctx.chat?.id === groupChatId &&
+      isServiceMessage(msg as unknown as Record<string, unknown>)
+    ) {
+      await deleteServiceMessage(deps, ctx.chat.id, msg.message_id);
+      return;
+    }
+    await next();
   });
 
   // 私訊文字（非指令）：當作 UUID 驗證
@@ -210,6 +228,21 @@ export function registerBot(bot: Bot, deps: BotDeps): void {
       if (!looksLikeUuid(text)) await ctx.reply(dmUuidFormatText());
     }
   });
+}
+
+/** 刪除目標群組內的 service message；失敗（無權限／已不存在）則靜默忽略。 */
+async function deleteServiceMessage(
+  deps: BotDeps,
+  chatId: number | undefined,
+  messageId: number | undefined,
+): Promise<void> {
+  if (chatId === undefined || messageId === undefined) return;
+  if (chatId !== deps.groupChatId) return;
+  try {
+    await deps.tg.deleteMessage(chatId, messageId);
+  } catch {
+    // 忽略：機器人可能無刪除權限，或訊息已不存在。
+  }
 }
 
 async function ensureAdmin(ctx: { from?: { id: number } | undefined; reply: (t: string) => Promise<unknown> }, deps: BotDeps): Promise<boolean> {
